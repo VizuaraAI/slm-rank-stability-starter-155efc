@@ -1,0 +1,25 @@
+# Core runtime
+torch>=2.5.0
+transformers>=4.46.0
+accelerate>=1.0.0
+datasets>=3.0.0
+safetensors>=0.4.5
+sentencepiece>=0.2.0
+
+# 4-bit deployment arms
+bitsandbytes>=0.44.0          # NF4 / double quantization arm
+gptqmodel>=1.4.0              # maintained successor to auto-gptq, GPTQ arm
+autoawq>=0.2.6                # AWQ arm (optional, skip if wheels fail on your GPU)
+optimum>=1.23.0               # shared quantization plumbing for transformers
+
+# Evaluation and statistics
+lm-eval>=0.4.5                # reference harness, used to cross-check our scores
+scipy>=1.14.0                 # Kendall tau-b, bootstrap helpers
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Config, CLI, reporting
+pyyaml>=6.0.2
+tqdm>=4.66.0
+matplotlib>=3.9.0
+tabulate>=0.9.0

@@ -1,0 +1,129 @@
+# Default configuration for the SLM rank-stability study.
+#
+# Every number here is a knob you are expected to change. Start small
+# (two models, two arms, one axis, 100 items) and only scale up once the
+# whole loop runs end to end.
+
+run_name: pilot
+
+# ---------------------------------------------------------------------------
+# Model zoo. Keys are short ids used in filenames and tables; "family" is the
+# grouping used by the architecture analysis in the paper's ablation A1.
+# ---------------------------------------------------------------------------
+models:
+  - id: qwen2.5-0.5b-i
+    hf_name: Qwen/Qwen2.5-0.5B-Instruct
+    family: qwen2.5
+    params_b: 0.5
+  - id: qwen2.5-1.5b-i
+    hf_name: Qwen/Qwen2.5-1.5B-Instruct
+    family: qwen2.5
+    params_b: 1.5
+  - id: qwen2.5-3b-i
+    hf_name: Qwen/Qwen2.5-3B-Instruct
+    family: qwen2.5
+    params_b: 3.0
+  - id: llama3.2-1b-i
+    hf_name: meta-llama/Llama-3.2-1B-Instruct
+    family: llama3.2
+    params_b: 1.0
+  - id: llama3.2-3b-i
+    hf_name: meta-llama/Llama-3.2-3B-Instruct
+    family: llama3.2
+    params_b: 3.0
+  - id: smollm2-1.7b-i
+    hf_name: HuggingFaceTB/SmolLM2-1.7B-Instruct
+    family: smollm2
+    params_b: 1.7
+  - id: smollm2-360m-i
+    hf_name: HuggingFaceTB/SmolLM2-360M-Instruct
+    family: smollm2
+    params_b: 0.36
+  - id: gemma2-2b-it
+    hf_name: google/gemma-2-2b-it
+    family: gemma2
+    params_b: 2.6
+  - id: tinyllama-1.1b-chat
+    hf_name: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+    family: tinyllama
+    params_b: 1.1
+
+# ---------------------------------------------------------------------------
+# Precision arms. "bf16" is the reference leaderboard that everything else is
+# compared against. Drop arms you cannot build on your hardware; the analysis
+# degrades gracefully to whatever arms exist.
+# ---------------------------------------------------------------------------
+arms:
+  - name: bf16
+    method: none
+  - name: gptq-w4
+    method: gptq
+    bits: 4
+    group_size: 128
+  - name: awq-w4
+    method: awq
+    bits: 4
+    group_size: 128
+  - name: nf4
+    method: bnb_nf4
+    bits: 4
+    double_quant: true
+  - name: gguf-q4km
+    method: gguf
+    quant_type: Q4_K_M
+
+# Calibration data shared by the calibration-dependent arms (gptq, awq).
+calibration:
+  dataset: allenai/c4
+  subset: en
+  n_samples: 128
+  seq_len: 2048
+  seed: 1234
+
+# ---------------------------------------------------------------------------
+# Capability axes. "kind" selects the scorer: mcqa uses length-normalised
+# log-likelihood over options, generative samples text and applies a matcher.
+# ---------------------------------------------------------------------------
+axes:
+  - name: arc_challenge
+    kind: mcqa
+    hf_dataset: allenai/ai2_arc
+    hf_config: ARC-Challenge
+    split: test
+    max_items: 300
+  - name: mmlu
+    kind: mcqa
+    hf_dataset: cais/mmlu
+    hf_config: all
+    split: test
+    max_items: 500
+  - name: gsm8k
+    kind: generative
+    hf_dataset: openai/gsm8k
+    hf_config: main
+    split: test
+    max_items: 250
+    max_new_tokens: 256
+
+# ---------------------------------------------------------------------------
+# Variance controls. These exist so that a rank change can be attributed to
+# quantization rather than to evaluation design.
+# ---------------------------------------------------------------------------
+evaluation:
+  prompt_templates: [plain, lettered, qa_prefix]   # see src/prompts.py
+  shuffle_options: true
+  shuffle_seeds: [0, 1]
+  batch_size: 8
+  max_seq_len: 2048
+  greedy: true
+  seed: 0
+
+statistics:
+  bootstrap_resamples: 10000
+  topk: [1, 3, 5]
+  confidence: 0.95
+
+paths:
+  variants_dir: artifacts/variants
+  results_dir: artifacts/results
+  tables_dir: artifacts/tables
